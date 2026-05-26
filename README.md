@@ -6,7 +6,7 @@ The original **DNMR** software was developed by **Davis Garrad**.
 Original repository: https://github.com/Davis-Garrad/DNMR
 
 The **T2 extension** was implemented by **Giacomo Panzera**.  
-Contact: giacomo.panzera@psi.ch
+Contact: giacomo.panzera@mail.polimi.it
 
 ## Note
 
@@ -21,7 +21,11 @@ The new **T2 Fit** tab:
 - plots the integrated signal as a function of echo time;
 - fits the decay to extract **T2**.
 
-The fitting model is: S(t) = A * exp(-(t / T2)^r) + c
+The fitting model is:
+
+```text
+S(t) = A * exp(-(t / T2)^r) + c
+```
 
 ## Installation
 
@@ -33,24 +37,39 @@ This is **not mandatory**, but it helps avoid unwanted installation and compatib
 The recommended Python version is **Python 3.12**.  
 Higher Python versions may not work correctly with all required dependencies.
 
-Open **PowerShell** and go to the main project folder (cd C:\Users\your_username\path_to\DNMR-T2), i.e. the folder containing: 
-```text
-pyproject.toml
-README.md
-src
+Open **PowerShell** and move to the main project folder, i.e. the folder containing `pyproject.toml`, `README.md`, and `src`:
+
+```powershell
+cd C:\Users\your_username\path_to\DNMR-T2
 ```
-Create and activate a virtual environment: py -3.12 -m venv dnmr-env312
-                                           .\dnmr-env312\Scripts\Activate.ps1
 
+Create and activate a virtual environment:
 
-When the virtual environment is active, the PowerShell prompt should start with: (dnmr-env312)
+```powershell
+py -3.12 -m venv dnmr-env312
+.\dnmr-env312\Scripts\Activate.ps1
+```
+
+When the virtual environment is active, the PowerShell prompt should start with:
+
+```text
+(dnmr-env312)
+```
 
 Install the required packages and install **DNMR-T2** from this repository:
 
+```powershell
 python -m pip install --upgrade pip setuptools wheel
 python -m pip install "numpy==1.26.4"
 python -m pip install .
 python -m pip install scipy
+```
+
+The command below installs **DNMR-T2** from the current repository folder:
+
+```powershell
+python -m pip install .
+```
 
 ## pytnt Patch
 
@@ -58,8 +77,14 @@ In some cases, `pytnt` may raise an error related to `numpy.dual`.
 
 If this happens, run the following command once, while the virtual environment is active:
 
+```powershell
 python -c "from pathlib import Path; import sysconfig; p=Path(sysconfig.get_paths()['purelib'])/'pytnt'/'processTNT.py'; s=p.read_text(); s=s.replace('import numpy.dual as npfast', 'import numpy.linalg as npfast'); p.write_text(s); print('Patch pytnt done:', p)"
+```
 
 ## Run DNMR-T2
 
-With the virtual environment active, run: python -m DNMR
+With the virtual environment active, run:
+
+```powershell
+python -m DNMR
+```
