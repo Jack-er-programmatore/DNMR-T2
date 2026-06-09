@@ -1,6 +1,7 @@
 
 import numpy as np
 import scipy as sp
+import traceback
 
 import matplotlib as mpl
 from matplotlib.figure import Figure
@@ -47,6 +48,28 @@ class TabT1Fit(Tab):
         l.addLayout(lv)
         l.addWidget(self.pushbutton_fit)
 
+        self.formula_frame = QFrame()
+        self.formula_frame.setFrameShape(QFrame.Shape.StyledPanel)
+
+        formula_layout = QVBoxLayout()
+
+        self.formula_label = QPlainTextEdit()
+        self.formula_label.setReadOnly(True)
+        self.formula_label.setStyleSheet("""
+            QPlainTextEdit {
+            font-family: Consolas;
+            font-size: 14px;
+            padding: 10px;
+            }
+        """)
+        
+
+        formula_layout.addWidget(self.formula_label)
+
+        self.formula_frame.setLayout(formula_layout)
+
+        l.addWidget(self.formula_frame, stretch=3)
+
         def add_fit_frame(name, *args, **kwargs):
             ''' Creates a frame widget for a new fit type and its output. args are, in order, the name of a fit variable, then unit string, then repeat.
             
@@ -64,18 +87,23 @@ class TabT1Fit(Tab):
             
             for i in range(len(args)//2):
                 w = FitParameterWidget(args[2*i], args[2*i+1], xplot=i in xplot, yplot=i in yplot)
+                
                 lo.addWidget(w)
                 self.output_frames[name]['widgets'] += [ w ]
             self.combobox_fittingroutine.addItem(name)
                 
             frm.setLayout(lo)
-            l.addWidget(frm)
+            l.addWidget(frm, stretch=1)
 
         # Title, var_name, var_units, var_name, var_units, ....
             # DEVELOPER NOTE: If you want to add more options for this, make sure to define fit_func in ``fit`` below
-        add_fit_frame('7/2 Spin',          '\u03b3\u2080', '', 's', '', 'T\u2081', '\u03bcs', 'r', '', xplot=[2])
-        add_fit_frame('7/2 Spin (Sat. 1)', '\u03b3\u2080', '', 's', '', 'T\u2081', '\u03bcs', 'r', '', xplot=[2])
         add_fit_frame('1/2 Spin',          '\u03b3\u2080', '', 's', '', 'T\u2081', '\u03bcs', 'r', '', xplot=[2])
+        add_fit_frame('3/2 Spin (NQR)',          '\u03b3\u2080', '', 's', '', 'T\u2081', '\u03bcs', 'r', '', xplot=[2])
+        add_fit_frame('3/2 Spin (central)',          '\u03b3\u2080', '', 's', '', 'T\u2081', '\u03bcs', 'r', '', xplot=[2])
+        add_fit_frame('3/2 Spin (satellite)',          '\u03b3\u2080', '', 's', '', 'T\u2081', '\u03bcs', 'r', '', xplot=[2])
+        add_fit_frame('7/2 Spin (central)',          '\u03b3\u2080', '', 's', '', 'T\u2081', '\u03bcs', 'r', '', xplot=[2])
+        add_fit_frame('7/2 Spin (1st satellite)', '\u03b3\u2080', '', 's', '', 'T\u2081', '\u03bcs', 'r', '', xplot=[2])
+        
         #add_fit_frame('Spin 1', '\u03b30', '', 's', '', 'T1', '\u03bcs', 'r', '')
         # ...
         
@@ -135,6 +163,7 @@ class TabT1Fit(Tab):
         
         self.ax.set_xscale('log')
         self.ax.set_xlabel('delay time (us)')
+        self.ax.set_ylabel(r'$\int \mathrm{Re}\{\mathrm{FT}\}\,df$', labelpad=10)
         self.fig.subplots_adjust(bottom=0.18)
         plotted_integrations = []
         plotted_del_times = []
@@ -149,7 +178,7 @@ class TabT1Fit(Tab):
             else:
                 excluded_integrations += [integrations[i]]
                 excluded_del_times += [del_times[i]]
-        plt_pts = self.ax.errorbar(plotted_del_times, plotted_integrations, label='\u222b FT', linestyle='', marker='o', yerr=plotted_errs)
+        plt_pts = self.ax.errorbar(plotted_del_times, plotted_integrations, label=r'$\int \mathrm{Re}\{\mathrm{FT}\}\,df$', linestyle='', marker='o', yerr=plotted_errs)
         self.ax.scatter(excluded_del_times, excluded_integrations, color=(plt_pts[-1][-1]).get_color(), linestyle='', marker='x')
         
         post_aq_max = np.max(self.fileselector.data.params.post_acquisition_time * 1e3) # this is in ms. Our axes in us
@@ -158,23 +187,88 @@ class TabT1Fit(Tab):
         self.data = (del_times, integrations, uncertainties)
 
         if(self.plot_data[0].shape[0] > 0):
-            params_list = ''
+            routine = self.combobox_fittingroutine.currentText()
+            params_list = routine + '\n'
+
             out_frame = self.get_current_oframe()
+
             for wi in out_frame['widgets']:
                 params_list += f'{wi.get_full_display()}\n'
-        
+
                 if(wi.xplot):
                     self.ax.axvline(wi.get_value(), linestyle='--')
                 if(wi.yplot):
                     self.ax.axhline(wi.get_value(), linestyle='--')
+
             params_list = params_list[:-1]
-            self.ax.plot(self.plot_data[0], self.plot_data[1], label=params_list)
-        
+
+            self.ax.plot(
+                self.plot_data[0],
+                self.plot_data[1],
+                label=params_list
+            )
+        self.ax.legend(loc='upper left', fontsize=8, framealpha=0.9)
+               
     def update_fit_type(self):
         for key, val in self.output_frames.items():
             val['frame'].hide()
         out_frame = self.get_current_oframe()
         out_frame['frame'].show()
+        routine = self.combobox_fittingroutine.currentText()
+
+        if routine == '1/2 Spin':
+            formula = 'S(t) = γ₀[1 - (1+s)exp(-(t/T₁)^r)]'
+
+        elif routine == '3/2 Spin (NQR)':
+            formula = (
+                'S(t) = γ₀[1 - (1+s)exp(-(3t/T₁)^r)]'
+            )
+
+        elif routine == '3/2 Spin (central)':
+            formula = (
+                'S(t) = γ₀[1 - (1+s)('
+                ' 0.1 exp(-(t/T₁)^r)'
+                ' +0.9 exp(-(6t/T₁)^r)'
+                ')]'
+            )
+
+        elif routine == '3/2 Spin (satellite)':
+            formula = (
+                'S(t) = γ₀[1 - (1+s)('
+                ' 0.1 exp(-(t/T₁)^r)'
+                ' +0.5 exp(-(3t/T₁)^r)'
+                ' +0.4 exp(-(6t/T₁)^r)'
+                ')]'
+            )
+        
+
+        elif routine == '7/2 Spin (central)':
+            formula = (
+                'S(t) = γ₀[1 - (1+s)('
+                ' 1/84 exp(-(t/T₁)^r)'
+                ' +3/44 exp(-(6t/T₁)^r)'
+                ' +75/364 exp(-(15t/T₁)^r)'
+                ' +1225/1716 exp(-(28t/T₁)^r)'
+                ')]'
+            )
+
+        elif routine == '7/2 Spin (1st satellite)':
+            formula = (
+                'S(t) = γ₀[1 - (1+s)('
+                ' 1/84 exp(-(t/T₁)^r)'
+                ' +1/84 exp(-(3t/T₁)^r)'
+                ' +2/66 exp(-(6t/T₁)^r)'
+                ' +18/154 exp(-(10t/T₁)^r)'
+                ' +1/1092 exp(-(15t/T₁)^r)'
+                ' +49/132 exp(-(21t/T₁)^r)'
+                ' +392/858 exp(-(28t/T₁)^r)'
+                ')]'
+            )
+
+        else:
+            formula = ''
+
+        self.formula_label.setPlainText(formula)
         
     def fit(self):
         self.update() # get most recent values to fit
@@ -186,7 +280,7 @@ class TabT1Fit(Tab):
         except:
             del_times = self.fileselector.data.sequence['0'].relaxation_time # Legacy, as I didn't know what this was when I wrote it. Surprise, surprise
 
-        if(self.combobox_fittingroutine.currentText() == '7/2 Spin'):
+        if(self.combobox_fittingroutine.currentText() == '7/2 Spin (central)'):
             # DEVELOPER NOTE: If you want to add more options for this, make sure to define fit_func (similarly to below) and add an item in the generate_layout function
             
             bounds = [ [0, np.max(np.abs(self.data[1]))*10], [-1, 10], [np.min(del_times)/10, np.max(del_times)*10], [0.99*0, 1.01*10] ]
@@ -197,14 +291,69 @@ class TabT1Fit(Tab):
                 r = args[3] # stretched exponent (ideally 1)
                 #y = y0 (1-(1+s) ((1/84)*Exp[-(t/T1)^r]+(3/44)*Exp[-(6 t/T1)^r]+(75/364)*Exp[-(15 t/T1)^r]+(1225/1716)*Exp[-(28 t/T1)^r]))
                 fit = gamma_0 * (1-(1+s)*(
-                                            (1/84)*     np.exp(-np.pow(x/T1,    r)) + 
-                                            (3/44)*     np.exp(-np.pow(6*x/T1,  r)) +
-                                            (75/364)*   np.exp(-np.pow(15*x/T1, r)) +
-                                            (1225/1716)*np.exp(-np.pow(28*x/T1, r)) 
+                                            (1/84)*     np.exp(-np.power(x/T1,    r)) + 
+                                            (3/44)*     np.exp(-np.power(6*x/T1,  r)) +
+                                            (75/364)*   np.exp(-np.power(15*x/T1, r)) +
+                                            (1225/1716)*np.exp(-np.power(28*x/T1, r)) 
                                          ))
                 return fit
+        
+        elif(self.combobox_fittingroutine.currentText() == '3/2 Spin (NQR)'):
+            bounds = [ [0, np.max(np.abs(self.data[1]))*10],
+                       [-1, 10],
+                       [np.min(del_times)/10, np.max(del_times)*10],
+                       [0.99*0, 1.01*10] ]
+
+            def fit_func(args, t):
+                gamma_0 = args[0]
+                s = args[1]
+                T1 = args[2]
+                r = args[3]
+
+                return gamma_0 * (
+                    1 - (1+s) * np.exp(-np.power(3*t/T1, r))
+                )
+            
+        elif(self.combobox_fittingroutine.currentText() == '3/2 Spin (central)'):
+            bounds = [ [0, np.max(np.abs(self.data[1]))*10],
+                       [-1, 10],
+                       [np.min(del_times)/10, np.max(del_times)*10],
+                       [0.99*0, 1.01*10] ]
+
+            def fit_func(args, t):
+                gamma_0 = args[0]
+                s = args[1]
+                T1 = args[2]
+                r = args[3]
+
+                return gamma_0 * (
+                    1 - (1+s) * (
+                        0.1*np.exp(-np.power(t/T1, r)) +
+                        0.9*np.exp(-np.power(6*t/T1, r))
+                    )
+                )
+            
+        elif(self.combobox_fittingroutine.currentText() == '3/2 Spin (satellite)'):
+            bounds = [ [0, np.max(np.abs(self.data[1]))*10],
+                       [-1, 10],
+                       [np.min(del_times)/10, np.max(del_times)*10],
+                       [0.99*0, 1.01*10] ]
+
+            def fit_func(args, t):
+                gamma_0 = args[0]
+                s = args[1]
+                T1 = args[2]
+                r = args[3]
+
+                return gamma_0 * (
+                    1 - (1+s) * (
+                        0.1*np.exp(-np.power(t/T1, r)) +
+                        0.5*np.exp(-np.power(3*t/T1, r)) +
+                        0.4*np.exp(-np.power(6*t/T1, r))
+                    )
+                )
                 
-        elif(self.combobox_fittingroutine.currentText() == '7/2 Spin (Sat. 1)'):
+        elif(self.combobox_fittingroutine.currentText() == '7/2 Spin (1st satellite)'):
             bounds = [ [0, np.max(np.abs(self.data[1]))*10], [-1, 10], [np.min(del_times)/10, np.max(del_times)*10], [0.99*0, 1.01*10] ]
             
             def fit_func(args, t):
@@ -213,13 +362,13 @@ class TabT1Fit(Tab):
                 T1 = args[2]
                 r = args[3]
                 
-                return gamma_0 * (1 - (1+s) * (1/84*np.exp(-np.pow(t/T1, r)) + 
-                                               1/84*np.exp(-np.pow(3*t/T1, r)) + 
-                                               2/66*np.exp(-np.pow(6*t/T1, r)) + 
-                                               18/154*np.exp(-np.pow(10*t/T1, r)) + 
-                                               1/1092*np.exp(-np.pow(15*t/T1, r)) + 
-                                               49/132*np.exp(-np.pow(21*t/T1, r)) + 
-                                               392/858*np.exp(-np.pow(28*t/T1, r))))
+                return gamma_0 * (1 - (1+s) * (1/84*np.exp(-np.power(t/T1, r)) + 
+                                               1/84*np.exp(-np.power(3*t/T1, r)) + 
+                                               2/66*np.exp(-np.power(6*t/T1, r)) + 
+                                               18/154*np.exp(-np.power(10*t/T1, r)) + 
+                                               1/1092*np.exp(-np.power(15*t/T1, r)) + 
+                                               49/132*np.exp(-np.power(21*t/T1, r)) + 
+                                               392/858*np.exp(-np.power(28*t/T1, r))))
                 
         elif(self.combobox_fittingroutine.currentText() == '1/2 Spin'):
             bounds = [ [0, np.max(np.abs(self.data[1]))*10], [-1, 10], [np.min(del_times)/10, np.max(del_times)*10], [0.99*0, 1.01*10] ]
@@ -230,7 +379,7 @@ class TabT1Fit(Tab):
                 T1 = args[2]
                 r = args[3]
                 
-                return gamma_0 * (1 - (1+s) * np.exp(-np.pow(t/T1, r)))
+                return gamma_0 * (1 - (1+s) * np.exp(-np.power(t/T1, r)))
             
         def cost_func(args, x, y, yerr):
             return np.sum(np.square((fit_func(args, x) - y)/np.maximum(yerr, 0.01))) # more points is more fits
@@ -261,7 +410,7 @@ class TabT1Fit(Tab):
                                                  bounds=bounds)
         # get uncertainties on the fit, as I am too lazy to do the full analysis when scipy will do it for me
         try:
-            picky_scipy_bounds = np.array(bounds).T 
+            picky_scipy_bounds = np.array(bounds, dtype=float).T
             picky_scipy_bounds[0,:] -= 1e-9
             popt, pcov = sp.optimize.curve_fit(lambda xs, *args: fit_func(args, xs), included_xvals, included_yvals, p0=res.x, bounds=picky_scipy_bounds, sigma=included_errs, absolute_sigma=False)
         
@@ -291,6 +440,10 @@ class TabT1Fit(Tab):
         except Exception as e:
             traceback.print_exc()
         self.update()
+
+        
+
+        
         
     def get_exported_data(self):
         out_frame = self.get_current_oframe()

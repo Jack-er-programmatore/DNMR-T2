@@ -56,13 +56,18 @@ class TabT2Fit(Tab):
              - yplot: a list of indices corresponding to the fit variables. These will be plotted on the y axis.
             '''
             frm = QFrame() # TODO: Make this better.
+            frm = QFrame()
             frm.hide()
             lo = QVBoxLayout()
-            self.output_frames[name] = { 'frame': frm, 'widgets': [] }
-            
+            self.output_frames[name] = {
+            'frame': frm,
+            'widgets': []
+            }
+
             xplot = kwargs['xplot'] if 'xplot' in kwargs.keys() else []
             yplot = kwargs['yplot'] if 'yplot' in kwargs.keys() else []
-            
+           
+
             for i in range(len(args)//2):
                 w = FitParameterWidget(args[2*i], args[2*i+1], xplot=i in xplot, yplot=i in yplot)
                 lo.addWidget(w)
@@ -74,7 +79,13 @@ class TabT2Fit(Tab):
 
         # Title, var_name, var_units, var_name, var_units, ....
             # DEVELOPER NOTE: If you want to add more options for this, make sure to define fit_func in ``fit`` below
-        add_fit_frame('Simple T2 decay', 'A', '', 'T₂', 'μs', 'r', '', 'c', '', xplot=[1])
+        add_fit_frame(
+            'Simple T2 decay',
+            'A', '',
+            'T₂', 'μs',
+            'r', '',
+            xplot=[1]
+        )
     
         # ...
         
@@ -134,6 +145,7 @@ class TabT2Fit(Tab):
         
         self.ax.set_xscale('linear')
         self.ax.set_xlabel('echo time 2τ (us)')
+        self.ax.set_ylabel(r'$\int \mathrm{Re}\{\mathrm{FT}\}\,df$', labelpad=10)
         self.fig.subplots_adjust(bottom=0.18)
         plotted_integrations = []
         plotted_del_times = []
@@ -157,17 +169,28 @@ class TabT2Fit(Tab):
         self.data = (del_times, integrations, uncertainties)
 
         if(self.plot_data[0].shape[0] > 0):
-            params_list = ''
+            formula_text = r'$S(t)=A\exp[-(t/T_2)^r]$'
+            params_list = formula_text + '\n'
+
             out_frame = self.get_current_oframe()
+
             for wi in out_frame['widgets']:
                 params_list += f'{wi.get_full_display()}\n'
-        
+
                 if(wi.xplot):
                     self.ax.axvline(wi.get_value(), linestyle='--')
                 if(wi.yplot):
                     self.ax.axhline(wi.get_value(), linestyle='--')
+
             params_list = params_list[:-1]
-            self.ax.plot(self.plot_data[0], self.plot_data[1], label=params_list)
+
+            self.ax.plot(
+                self.plot_data[0],
+                self.plot_data[1],
+                label=params_list
+            )
+        
+        self.ax.legend(loc='upper right', fontsize=8, framealpha=0.9)
 
         xmax = np.max(del_times)
         self.ax.set_xlim(0, xmax * 1.05)
@@ -212,10 +235,9 @@ class TabT2Fit(Tab):
                 return
 
             bounds = [
-                        [0.0, float(y_abs_max * 10)],              # A
-                        [float(t_min / 100), float(t_max * 100)],  # T2
-                        [0.1, 5.0],                                # r
-                        [float(-y_abs_max * 2), float(y_abs_max * 2)] # c
+                        [-y_abs_max * 10.0, y_abs_max * 10.0],  # A
+                        [t_min / 10.0, t_max * 10.0],           # T2
+                        [0.1, 5.0]                              # r
                     ]
             
             bounds[1][0] = max(bounds[1][0], 1e-12)
@@ -224,9 +246,8 @@ class TabT2Fit(Tab):
                 A = float(args[0])
                 T2 = max(float(args[1]), 1e-12)
                 r = max(float(args[2]), 1e-12)
-                c = float(args[3])
 
-                return A * np.exp(-np.power(t / T2, r)) + c
+                return A * np.exp(-np.power(t / T2, r)) 
                 
         def cost_func(args, x, y, yerr):
             return np.sum(np.square((fit_func(args, x) - y)/np.maximum(yerr, 0.01))) # more points is more fits

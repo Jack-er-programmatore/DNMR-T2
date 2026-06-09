@@ -20,10 +20,10 @@ class TabFieldScan(Tab):
         self.data = [[], []]
 
     def plot_logic(self):
-        if('environment_se_mf' in self.fileselector.data.keys() or 
+        if('environment_mf' in self.fileselector.data.keys() or 
             'ppms_mf' in self.fileselector.data.keys() or 
             'ppms_field' in self.fileselector.data.keys() or 
-            'se_mf' in self.fileselector.data.keys()): # legacy
+            'mf' in self.fileselector.data.keys()): # legacy
                 
             index = self.fileselector.spinbox_index.value()
 
@@ -38,10 +38,10 @@ class TabFieldScan(Tab):
             mag_integral = np.sum(np.abs(reals + 1j*imags), axis=1)
 
             try:
-                fields = self.fileselector.data.environment_se_mf
+                fields = self.fileselector.data.environment_mf
             except:
                 try:
-                    fields = self.fileselector.data.se_mf
+                    fields = self.fileselector.data.mf
                 except:
                     try:
                         fields = self.fileselector.data.ppms_field

@@ -11,6 +11,8 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
 
+
+
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import *
 from PyQt6 import QtGui
@@ -25,6 +27,7 @@ from DNMR.tab_t2_fitting import *
 from DNMR.tab_field_scan import *
 from DNMR.tab_peak_amplitude import *
 from DNMR.tab_inv_laplace import *
+from DNMR.tab_environment import *
 
 class MainWindow(QWidget):
     def __init__(self, parent=None):
@@ -59,6 +62,7 @@ class MainWindow(QWidget):
         self.tab_fieldscan = TabFieldScan(data_widgets, self)
         self.tab_peakamp = TabPeakAmplitude(data_widgets, self)
         self.tab_inv_laplace = TabInvLaplace(data_widgets, self)
+        self.tab_environment = TabEnvironment(data_widgets, self)
 
         ### TAB ADDING
         self.tabwidget_tabs.addTab(self.tab_phaseadj, 'Time Domain')
@@ -68,6 +72,7 @@ class MainWindow(QWidget):
         self.tabwidget_tabs.addTab(self.tab_fieldscan, 'Field Scan')
         self.tabwidget_tabs.addTab(self.tab_peakamp, 'Peak Amplitudes')
         self.tabwidget_tabs.addTab(self.tab_inv_laplace, 'Inverse Laplace')
+        self.tabwidget_tabs.addTab(self.tab_environment,'Plotting')
         
         ### TAB FUNCTIONALITY
         self.tabwidget_tabs.currentChanged.connect(lambda: self.tabwidget_tabs.currentWidget().update())

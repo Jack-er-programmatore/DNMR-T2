@@ -77,8 +77,8 @@ class Tab(QWidget):
         self.toolbar.update() # Clear the axes stack
         self.toolbar.push_current()  # save the current status as home
 
-        self.ax.set_xlim(old_x_lim)  # and restore zoom
-        self.ax.set_ylim(old_y_lim)
+        #self.ax.set_xlim(old_x_lim)  # and restore zoom
+        #self.ax.set_ylim(old_y_lim)
         self.ax.legend()
 
         self.canvas.draw()

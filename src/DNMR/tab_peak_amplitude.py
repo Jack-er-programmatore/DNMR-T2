@@ -142,3 +142,4 @@ class TabPeakAmplitude(Tab):
                  self.combobox_labelling.currentText(): self.data[0],
                  'integrals': self.data[1],
                }
+    
