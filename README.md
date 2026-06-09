@@ -1,11 +1,11 @@
 # DNMR-T2
 
-This repository contains a modified version of **DNMR** with an added **T2 fitting tab**.
+This repository contains a modified version of **DNMR** with additional tools for **T2 analysis**, **T1 fitting**, and **data visualization**.
 
 The original **DNMR** software was developed by **Davis Garrad**.  
 Original repository: https://github.com/Davis-Garrad/DNMR
 
-The **T2 extension** was implemented by **Giacomo Panzera**.  
+The extensions included in this repository were implemented by **Giacomo Panzera**.  
 Contact: giacomo.panzera@mail.polimi.it
 
 ## Note
@@ -13,9 +13,11 @@ Contact: giacomo.panzera@mail.polimi.it
 This repository contains the **full modified DNMR source code**.  
 It is **not necessary** to download the original DNMR repository separately.
 
-## Added Feature
+## Added Features
 
-The new **T2 Fit** tab:
+### T2 Fit Tab
+
+The **T2 Fit** tab:
 
 - integrates the selected frequency-domain region;
 - plots the integrated signal as a function of echo time;
@@ -26,6 +28,23 @@ The fitting model is:
 ```text
 S(t) = A * exp(-(t / T2)^r) + c
 ```
+
+### T1 Fit Tab
+
+The **T1 Fit** tab includes multiple fitting models for the analysis of T1 relaxation experiments.
+
+Additional fitting functions have been implemented to provide greater flexibility when fitting experimental data.
+
+### Plotting Tab
+
+The **Plotting** tab allows visualization of acquired experimental variables, including:
+
+- capacitance;
+- temperature;
+- magnetic field;
+- and other acquisition parameters stored in the dataset.
+
+This tab provides a convenient way to inspect experimental conditions and monitor parameter evolution throughout measurements.
 
 ## Installation
 
